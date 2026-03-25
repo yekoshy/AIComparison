@@ -3,128 +3,395 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Models Mindmap</title>
+    <title>AI Ecosystem Explorer</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; background: #f8fafc; }
-        #tree-container { flex: 2; cursor: grab; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: #f8fafc; }
+        
+        /* Top Navigation Bar */
+        #nav-bar {
+            background: #1e293b;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        #nav-bar h1 { color: white; margin: 0; font-size: 1.2rem; margin-right: 20px; }
+        .nav-btn {
+            background: #334155; color: white; border: none; padding: 10px 20px; border-radius: 6px;
+            cursor: pointer; font-size: 0.95rem; transition: background 0.2s; font-weight: 600;
+        }
+        .nav-btn:hover { background: #475569; }
+        .nav-btn.active { background: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+
+        /* Main Content Layout */
+        #main-container { display: flex; flex: 1; overflow: hidden; }
+        #tree-container { flex: 2; cursor: grab; position: relative; }
+        #tree-container:active { cursor: grabbing; }
+        
+        /* Right Details Pane */
         #details-pane { 
             flex: 1; background: white; border-left: 1px solid #e2e8f0; 
-            padding: 30px; overflow-y: auto; box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+            padding: 40px; overflow-y: auto; box-shadow: -4px 0 15px rgba(0,0,0,0.03);
         }
-        .node circle { fill: #fff; stroke: #3b82f6; stroke-width: 3px; cursor: pointer; }
-        .node text { font: 12px sans-serif; font-weight: 600; }
+        
+        /* Node & SVG Styles */
+        .node circle { fill: #fff; stroke: #3b82f6; stroke-width: 3px; cursor: pointer; transition: r 0.2s; }
+        .node circle:hover { r: 8; fill: #eff6ff; }
+        .node text { font: 13px sans-serif; font-weight: 600; fill: #334155; pointer-events: none;}
         .link { fill: none; stroke: #cbd5e1; stroke-width: 2px; }
-        h2 { color: #1e293b; margin-top: 0; }
-        p { line-height: 1.6; color: #475569; }
-        .hint { font-style: italic; color: #94a3b8; }
+        
+        /* Text Styles */
+        h2 { color: #0f172a; margin-top: 0; font-size: 1.8rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        h3 { color: #3b82f6; font-size: 1.2rem; margin-top: 25px; margin-bottom: 10px; }
+        p { line-height: 1.7; color: #475569; font-size: 1.05rem; white-space: pre-wrap; }
+        .hint { font-style: italic; color: #94a3b8; background: #f1f5f9; padding: 15px; border-radius: 8px; border-left: 4px solid #cbd5e1; }
     </style>
 </head>
 <body>
 
-<div id="tree-container"></div>
-<div id="details-pane">
-    <h2 id="detail-title">AI Models Explorer</h2>
-    <div id="detail-content">
-        <p class="hint">Click on a comparison point (e.g., Deepness, Famous Feature) to see the full details here.</p>
+<div id="nav-bar">
+    <h1>AI Ecosystem</h1>
+    <button class="nav-btn active" onclick="loadMap('models', this)">1. AI Models</button>
+    <button class="nav-btn" onclick="loadMap('agents', this)">2. Classic AI Agents</button>
+    <button class="nav-btn" onclick="loadMap('agentic', this)">3. Agentic AI Patterns</button>
+</div>
+
+<div id="main-container">
+    <div id="tree-container"></div>
+    <div id="details-pane">
+        <h2 id="detail-title">Explorer</h2>
+        <div id="detail-content">
+            <p class="hint">Click on a sub-node (like "Core Mechanism" or "Deepness") in the mindmap to explore its full details here.</p>
+        </div>
     </div>
 </div>
 
 <script>
-    const data = {
-        "name": "AI Models",
-        "children": [
-            {
-                "name": "Vanilla NN",
-                "children": [
-                    {"name": "Deepness", "desc": "Typically shallow to moderate. Deep versions suffer from vanishing gradients."},
-                    {"name": "Famous Feature", "desc": "Fully Connected (Dense) Layers where every node connects to every node in adjacent layers."},
-                    {"name": "Area of Use", "desc": "Tabular data, basic classification, and financial forecasting."}
-                ]
-            },
-            {
-                "name": "CNN",
-                "children": [
-                    {"name": "Deepness", "desc": "Can be extremely deep (ResNet, VGG). Designed for layer stacking."},
-                    {"name": "Famous Feature", "desc": "Convolutional Filters (Kernels) and Pooling Layers for spatial invariance."},
-                    {"name": "Area of Use", "desc": "Computer Vision, image recognition, and autonomous driving."}
-                ]
-            },
-            {
-                "name": "Transformer",
-                "children": [
-                    {"name": "Deepness", "desc": "Massively deep (GPT-3 has 96 layers) using residual connections."},
-                    {"name": "Famous Feature", "desc": "Multi-Head Self-Attention. Processes all data simultaneously."},
-                    {"name": "Area of Use", "desc": "Large Language Models (ChatGPT), Translation, and Vision Transformers."}
-                ]
-            }
-            // Add other models from the CSV here following the same pattern
-        ]
+    // --- DATASETS ---
+
+    const datasets = {
+        models: {
+            "name": "AI Models",
+            "children": [
+                {
+                    "name": "Vanilla NN (VNN / MLP)",
+                    "children": [
+                        {"name": "Name", "desc": "Vanilla Neural Network, Multi-Layer Perceptron (MLP), or Feedforward Neural Network."},
+                        {"name": "Deepness", "desc": "Typically shallow to moderate. Making them very deep often leads to the vanishing gradient problem and an explosion of parameters, making training highly inefficient."},
+                        {"name": "Number of Neurons", "desc": "Generally fewer total neurons compared to modern CNNs. However, every single neuron is fully connected to all neurons in the previous layer."},
+                        {"name": "Number of Parameters", "desc": "Extremely high relative to the input size. Because every neuron connects to every neuron in the previous layer (Dense connections), the weights multiply rapidly. It scales very poorly with large inputs like images."},
+                        {"name": "Famous Feature", "desc": "Fully Connected (Dense) Layers – where every node is connected to every node in the adjacent layers."},
+                        {"name": "Main reason why to use", "desc": "Great for finding complex, non-linear relationships in standard, unstructured, or flattened data where spatial relationships (the order/position of inputs) do not matter."},
+                        {"name": "Area of Use", "desc": "Tabular data, basic classification and regression tasks, financial forecasting, and general-purpose machine learning on structured datasets."}
+                    ]
+                },
+                {
+                    "name": "CNN",
+                    "children": [
+                        {"name": "Name", "desc": "Convolutional Neural Network (CNN or ConvNet)."},
+                        {"name": "Deepness", "desc": "Can be extremely deep (e.g., ResNet, VGG, Inception). The architecture (especially with pooling and residual connections) is explicitly designed to handle deep layer stacking."},
+                        {"name": "Number of Neurons", "desc": "Often very high. Neurons are arranged in 3D volumes (width, height, depth/channels). A single convolutional layer can contain hundreds of thousands of neurons mapped to different spatial locations."},
+                        {"name": "Number of Parameters", "desc": "Significantly fewer per layer relative to the input size. By using weight sharing (the same filter slides over the whole image) and sparse connectivity, CNNs drastically reduce the number of parameters needed to process large inputs."},
+                        {"name": "Famous Feature", "desc": "Convolutional Filters (Kernels) and Pooling (Subsampling) Layers – which allow the network to recognize spatial hierarchies and maintain translation invariance (recognizing an object no matter where it is in the image)."},
+                        {"name": "Main reason why to use", "desc": "Exceptional at spatial feature extraction. It automatically learns local patterns (like edges, shapes, and textures) and understands the spatial relationship between pixels without needing manual feature engineering."},
+                        {"name": "Area of Use", "desc": "Computer Vision (image classification, object detection, facial recognition, autonomous driving), medical image analysis, and sometimes audio/speech processing (using 1D CNNs)."}
+                    ]
+                },
+                {
+                    "name": "RNN",
+                    "children": [
+                        {"name": "Name", "desc": "Recurrent Neural Network (RNN). (Advanced variants include LSTM and GRU)."},
+                        {"name": "Deepness", "desc": "Structurally they can be shallow or moderate in layers, but they are infinitely deep through time. When processing a sequence, an RNN is \"unrolled\" into a deep network where each time step acts like a new layer. Standard RNNs suffer terribly from vanishing gradients over time, which is why LSTMs/GRUs were invented."},
+                        {"name": "Number of Neurons", "desc": "The physical number of neurons might be relatively small, but because they process data in a loop, those exact same neurons are activated over and over again for every step in the sequence."},
+                        {"name": "Number of Parameters", "desc": "Highly efficient for sequences. RNNs use temporal weight sharing. The exact same weights (parameters) are reused at every single time step. If you feed it a 5-word sentence or a 500-word essay, the number of parameters remains exactly the same."},
+                        {"name": "Famous Feature", "desc": "The Hidden State (Memory Loop) – neurons have cyclical connections. The network takes not only the current input but also the \"hidden state\" (memory) from the previous input to make its calculation."},
+                        {"name": "Main reason why to use", "desc": "Exceptional for sequential data of variable length where the order matters. It understands context (e.g., a word's meaning based on the words that came before it)."},
+                        {"name": "Area of Use", "desc": "Natural Language Processing (NLP) (translation, text generation, sentiment analysis), Speech Recognition (Siri, Alexa), and Time-Series Forecasting (stock market prediction, weather patterns)."}
+                    ]
+                },
+                {
+                    "name": "LSTM",
+                    "children": [
+                        {"name": "Name", "desc": "Long Short-Term Memory Network (A specialized type of Recurrent Neural Network - RNN)"},
+                        {"name": "Deepness", "desc": "Typically \"shallower\" in terms of stacked layers (usually 1 to 4 stacked layers), but inherently very \"deep\" in time. When unrolled over a sequence, they act like a massive deep network, specifically designed to resist vanishing gradients."},
+                        {"name": "Number of Neurons", "desc": "Built using complex Memory Cells instead of simple standard neurons. Each \"cell\" acts as a smart neuron containing an internal state and three internal regulators (gates)."},
+                        {"name": "Number of Parameters", "desc": "Generally much higher (roughly 4x more than a standard RNN/Vanilla layer). Because each LSTM cell contains 4 distinct neural network layers (for the gates and cell state update), it requires 4x the parameters."},
+                        {"name": "Famous Feature", "desc": "Cell State and Gates. It features an internal memory loop controlled by three gates (Forget, Input, and Output gates) that decide what information to keep, update, or throw away."},
+                        {"name": "Main reason why to use", "desc": "To process sequential data where context, order, and time matter. It solves the \"short-term memory\" issue of standard RNNs, allowing the network to remember important inputs from far back in a sequence."},
+                        {"name": "Area of Use", "desc": "Time-series forecasting (stock market, weather), Natural Language Processing (text generation, sentiment analysis), speech recognition, and machine translation."}
+                    ]
+                },
+                {
+                    "name": "Autoencoder",
+                    "children": [
+                        {"name": "Name", "desc": "Autoencoder (AE) / Autoassociator / Diabolo Network"},
+                        {"name": "Deepness", "desc": "Generally built as a symmetrical deep network. It consists of two distinct parts stacked together: an Encoder (which compresses) and a Decoder (which decompresses)."},
+                        {"name": "Number of Neurons", "desc": "Characterized by an \"hourglass\" or \"bowtie\" shape. It starts with many neurons (input size), drops drastically in the middle layer, and then expands back out to exactly match the input size."},
+                        {"name": "Number of Parameters", "desc": "Often has a large number of parameters because the output layer must exactly match the high-dimensional input layer (e.g., a 1080p image in, a 1080p image out). Note: Some autoencoders use \"tied weights\" to cut parameter count in half."},
+                        {"name": "Famous Feature", "desc": "The Bottleneck (Latent Space). The severely restricted middle layer forces the network to throw away noise and learn only the most essential, compressed representations of the data."},
+                        {"name": "Main reason why to use", "desc": "Unsupervised (Self-Supervised) Learning. Used when you do not have labels. The network uses the input data itself as the target, learning to compress and perfectly reconstruct the data."},
+                        {"name": "Area of Use", "desc": "Dimensionality reduction (a non-linear alternative to PCA), anomaly detection (detecting fraud by measuring how poorly the network reconstructs weird data), image denoising, feature extraction, and serving as the foundation for generative AI (e.g., Variational Autoencoders / VAEs)."}
+                    ]
+                },
+                {
+                    "name": "Transformer",
+                    "children": [
+                        {"name": "Name", "desc": "Transformer / Self-Attention Network (The architecture behind modern Foundation Models and LLMs)"},
+                        {"name": "Deepness", "desc": "Massively deep. Transformers are uniquely designed to be stacked dozens or hundreds of layers deep (e.g., GPT-3 has 96 layers) without losing information, thanks to built-in residual (skip) connections and layer normalization in every block."},
+                        {"name": "Number of Neurons", "desc": "Does not just use simple neurons. It is built from complex Transformer Blocks. Each block contains highly complex mathematical structures called Attention Heads, paired with separate Feed-Forward networks for every single word/token in the sequence."},
+                        {"name": "Number of Parameters", "desc": "Astronomically high (hundreds of millions to trillions of parameters). Massive weight matrices are required to calculate the \"Queries, Keys, and Values\" (Q, K, V) that allow the self-attention mechanisms to function across huge vocabularies."},
+                        {"name": "Famous Feature", "desc": "Multi-Head Self-Attention. It has the ability to look at an entire sequence of data all at once and dynamically score how important every piece of data is to every other piece of data, no matter how far apart they are."},
+                        {"name": "Main reason why to use", "desc": "To understand massive sequences with complex, long-range context. Unlike LSTMs (which process data slowly, one step at a time), Transformers process all data simultaneously (parallelization), which allows them to be trained on internet-scale datasets using thousands of GPUs."},
+                        {"name": "Area of Use", "desc": "Large Language Models (ChatGPT, Claude, Llama), advanced text generation, machine translation, code generation, and increasingly Computer Vision (Vision Transformers / ViT) and biology (AlphaFold)."}
+                    ]
+                }
+            ]
+        },
+
+        agents: {
+            "name": "Classic AI Agents",
+            "children": [
+                {
+                    "name": "Simple Reflex Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Operates solely on 'Condition-Action' rules \n\nIf XXX happens,\n do YYY\n\nIt only looks at the exact current moment and has zero memory of the past."},
+                        {"name": "Area of Use", "desc": "Smart thermostats (If temp < 20°C, turn on heater), spam filters, or basic video game bots."}
+                    ]
+                },
+                {
+                    "name": "Model-Based Reflex Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Like the simple agent, but it has an internal memory (a model of the world). It keeps track of the part of the world it can't currently see, using past observations to make better immediate decisions."},
+                        {"name": "Area of Use", "desc": "Basic self-driving car braking systems (remembering a car was in the blind spot a second ago, even if the camera can't see it right now)."}
+                    ]
+                },
+                {
+                    "name": "Goal-Based Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "This agent has a memory and a specific target (Goal). Instead of just reacting, it asks, 'What will happen if I do this action?' It uses search algorithms and planning to find a sequence of steps to reach the finish line."},
+                        {"name": "Area of Use", "desc": "GPS navigation routing, chess engines (finding a way to checkmate), or a robot navigating a maze."}
+                    ]
+                },
+                {
+                    "name": "Utility-Based Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Reaching the goal isn't enough; this agent wants to reach it in the best, cheapest, or safest way possible. It uses a 'Utility Function' to score different paths and chooses the one that maximizes its success or happiness."},
+                        {"name": "Area of Use", "desc": "Ride-sharing apps (Uber/Lyft finding the fastest route that avoids tolls and traffic), algorithmic stock trading (maximizing profit while minimizing risk)."}
+                    ]
+                },
+                {
+                    "name": "Learning Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Starts with incomplete knowledge. It takes actions, receives feedback (from a 'Critic' component), and updates its own rules so it performs better the next time. It learns from its mistakes."},
+                        {"name": "Area of Use", "desc": "Reinforcement Learning systems (like AlphaGo), recommendation algorithms that adapt to your clicks, or robotic dogs learning how to walk on ice."}
+                    ]
+                },
+                {
+                    "name": "Modern Autonomous (LLM) Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Uses a Large Language Model as its 'brain' to reason through complex, ambiguous tasks. It can actively use external tools (browse the web, write code, use a calculator) to achieve high-level goals without human hand-holding."},
+                        {"name": "Area of Use", "desc": "AI software engineers (Devin), autonomous research assistants, and advanced AI customer support that can look up databases and issue refunds independently."}
+                    ]
+                }
+            ]
+        },
+
+        agentic: {
+            "name": "Agentic AI Patterns",
+            "children": [
+                {
+                    "name": "Reflection Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Self-Critique & Iteration: The agent generates an initial draft, acts as its own critic to find errors or missing details, and iteratively refines the output before showing it to the user."},
+                        {"name": "Area of Use", "desc": "High-quality code generation (writing, testing, and fixing its own code), complex writing tasks, and accurate translation."}
+                    ]
+                },
+                {
+                    "name": "Tool-Use (Calling) Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "External Integration: The agent acts as a reasoning engine that knows what it doesn't know. It pauses to call external tools (web search, calculators, SQL databases, APIs) to fetch real-time or factual data before answering."},
+                        {"name": "Area of Use", "desc": "Customer support bots that check live order statuses, financial analysis bots fetching live stock prices, and automated email schedulers."}
+                    ]
+                },
+                {
+                    "name": "Planning (Plan-and-Execute) Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Task Decomposition: The agent receives a massive, complex goal and breaks it down into a step-by-step checklist. It then executes the steps sequentially, updating its plan if it hits a roadblock."},
+                        {"name": "Area of Use", "desc": "Autonomous research assistants (Deep Research), complex data science workflows, and autonomous software engineers (like Devin or AutoGPT)."}
+                    ]
+                },
+                {
+                    "name": "Multi-Agent System",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Collaboration & Personas: Instead of one massive AI doing everything, multiple specialized agents (e.g., a 'Researcher', a 'Writer', and a 'Reviewer') talk to each other, debate, and collaborate to produce the final result."},
+                        {"name": "Area of Use", "desc": "Complex enterprise workflows, simulated environments, game development, and advanced problem-solving (using frameworks like AutoGen or CrewAI)."}
+                    ]
+                },
+                {
+                    "name": "Router (Supervisor) Agent",
+                    "children": [
+                        {"name": "Core Mechanism", "desc": "Dispatching: A central 'manager' agent that doesn't do the heavy lifting itself. It analyzes the user's prompt and routes it to the most specialized sub-agent or specific AI model best suited for that exact task."},
+                        {"name": "Area of Use", "desc": "Enterprise customer service (routing billing questions to the billing AI, tech questions to the IT AI), LLM gateways optimizing for cost and speed."}
+                    ]
+                }
+            ]
+        }
     };
+
+    // --- D3.JS RENDERING LOGIC ---
 
     const width = window.innerWidth * 0.6;
     const margin = {top: 20, right: 90, bottom: 30, left: 90};
-    const dy = width / 3;
-    const dx = 50;
+    const dy = width / 3.5;
+    const dx = 45;
     const tree = d3.tree().nodeSize([dx, dy]);
     const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x);
 
-    const svg = d3.select("#tree-container").append("svg")
+    // Setup main SVG canvas
+    const container = d3.select("#tree-container");
+    const svg = container.append("svg")
         .attr("width", "100%")
         .attr("height", "100%")
-        .attr("viewBox", [-margin.left, -margin.top, width, dx * 10])
-        .call(d3.zoom().on("zoom", (event) => g.attr("transform", event.transform)))
-        .append("g");
+        .attr("viewBox", [-margin.left, -margin.top * 5, width, dx * 15]);
+
+    const zoomBehavior = d3.zoom().on("zoom", (event) => g.attr("transform", event.transform));
+    svg.call(zoomBehavior);
 
     const g = svg.append("g");
     const gLink = g.append("g").attr("class", "link-group");
     const gNode = g.append("g").attr("class", "node-group");
 
-    const root = d3.hierarchy(data);
-    root.x0 = dy / 2;
-    root.y0 = 0;
-    root.children.forEach(collapse);
+    let root, i = 0;
 
-    update(root);
+    // Initialize mapping
+    function initTree(dataObj) {
+        gLink.selectAll("*").remove();
+        gNode.selectAll("*").remove();
 
-    function collapse(d) { if (d.children) { d._children = d.children; d.children = null; } }
+        root = d3.hierarchy(dataObj);
+        root.x0 = dy / 2;
+        root.y0 = 0;
+        
+        // Collapse the leaves by default to keep it clean initially
+        root.children.forEach(collapse);
+        update(root);
+        
+        // Reset zoom state
+        svg.transition().duration(750).call(zoomBehavior.transform, d3.zoomIdentity.translate(0, margin.top * 5));
+        
+        // Reset details panel
+        document.getElementById('detail-title').innerText = dataObj.name + " Explorer";
+        document.getElementById('detail-content').innerHTML = `<p class="hint">Click on a sub-node in the ${dataObj.name} mindmap to explore its full details here.</p>`;
+    }
+
+    function collapse(d) { 
+        if (d.children) { 
+            d._children = d.children; 
+            d.children = null; 
+        } 
+    }
 
     function update(source) {
         const nodes = root.descendants().reverse();
         const links = root.links();
         tree(root);
 
-        const node = gNode.selectAll("g").data(nodes, d => d.id || (d.id = ++i));
+        // Render Nodes
+        const node = gNode.selectAll("g.node").data(nodes, d => d.id || (d.id = ++i));
         const nodeEnter = node.enter().append("g")
             .attr("class", "node")
             .attr("transform", d => `translate(${source.y0},${source.x0})`)
             .on("click", (event, d) => {
+                // If the node has a description (leaf node), show it in details pane
                 if (d.data.desc) {
-                    document.getElementById('detail-title').innerText = d.data.name;
-                    document.getElementById('detail-content').innerHTML = `<p>${d.data.desc}</p>`;
+                    let parentName = d.parent ? d.parent.data.name : "";
+                    document.getElementById('detail-title').innerText = parentName;
+                    document.getElementById('detail-content').innerHTML = `
+                        <h3>${d.data.name}</h3>
+                        <p>${d.data.desc}</p>
+                    `;
+                    // Highlight selected node visually
+                    d3.selectAll(".node circle").style("fill", "#fff").style("stroke", "#3b82f6");
+                    d3.select(event.currentTarget).select("circle").style("fill", "#dbeafe").style("stroke", "#1d4ed8");
                 }
-                d.children = d.children ? null : d._children;
-                update(d);
+                
+                // Toggle children
+                if (d.children || d._children) {
+                    d.children = d.children ? null : d._children;
+                    update(d);
+                }
             });
 
-        nodeEnter.append("circle").attr("r", 6);
+        // Add circles
+        nodeEnter.append("circle")
+            .attr("r", 1e-6)
+            .style("fill", d => d._children ? "#eff6ff" : "#fff");
+
+        // Add labels
         nodeEnter.append("text")
             .attr("dy", "0.31em")
-            .attr("x", d => d._children ? -10 : 10)
-            .attr("text-anchor", d => d._children ? "end" : "start")
-            .text(d => d.data.name);
+            .attr("x", d => d.children || d._children ? -12 : 12)
+            .attr("text-anchor", d => d.children || d._children ? "end" : "start")
+            .text(d => d.data.name)
+            .style("fill-opacity", 1e-6);
 
-        const nodeUpdate = node.merge(nodeEnter).transition().duration(250)
+        // Update existing nodes
+        const nodeUpdate = node.merge(nodeEnter).transition().duration(400)
             .attr("transform", d => `translate(${d.y},${d.x})`);
 
-        const link = gLink.selectAll("path").data(links, d => d.target.id);
-        link.enter().append("path").attr("class", "link")
-            .attr("d", d => { const o = {x: source.x0, y: source.y0}; return diagonal({source: o, target: o}); })
-            .merge(link).transition().duration(250).attr("d", diagonal);
+        nodeUpdate.select("circle")
+            .attr("r", d => d.data.desc ? 5 : 7)
+            .style("stroke-width", d => d.data.desc ? "2px" : "3px")
+            .style("fill", d => d._children ? "#eff6ff" : "#fff");
+
+        nodeUpdate.select("text")
+            .style("fill-opacity", 1);
+
+        // Remove old nodes
+        const nodeExit = node.exit().transition().duration(400)
+            .attr("transform", d => `translate(${source.y},${source.x})`)
+            .remove();
+
+        nodeExit.select("circle").attr("r", 1e-6);
+        nodeExit.select("text").style("fill-opacity", 1e-6);
+
+        // Render Links
+        const link = gLink.selectAll("path.link").data(links, d => d.target.id);
+        const linkEnter = link.enter().append("path")
+            .attr("class", "link")
+            .attr("d", d => {
+                const o = {x: source.x0, y: source.y0};
+                return diagonal({source: o, target: o});
+            });
+
+        link.merge(linkEnter).transition().duration(400).attr("d", diagonal);
+
+        link.exit().transition().duration(400)
+            .attr("d", d => {
+                const o = {x: source.x, y: source.y};
+                return diagonal({source: o, target: o});
+            })
+            .remove();
 
         nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
     }
-    let i = 0;
+
+    // --- UI CONTROLS ---
+
+    function loadMap(datasetKey, btnElement) {
+        // Update active button styles
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        btnElement.classList.add('active');
+        
+        // Render new tree
+        initTree(datasets[datasetKey]);
+    }
+
+    // Start by loading the Models map
+    initTree(datasets.models);
 </script>
 </body>
 </html>
